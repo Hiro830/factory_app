@@ -1,0 +1,27 @@
+<%= @buy %>
+<table border="1">
+  　<tr>
+  　　<th>部材名前</th>
+  　　<th>部材価格[円]</th>
+      <th>手持ち部材[個]</th>
+      <th>購入欄</th>
+    </tr>
+    <% @materials.each do |a| %>
+    <tr>
+      <td><%= a["name"] %></td>
+      <td><%= a["price"] %></td>
+      <td><%= a["stock_numbers"] %></td>
+      <td>
+        <form action="/buy" method="post">
+          個数: <input type="text" name="buy_count">
+          <input type="hidden" name="m_price" value="<%= a["price"] %>">
+          <input type="hidden" name="m_type" value="<%= a["product_materials"] %>">
+          <input type="hidden" name="last_stock" value="<%= a["stock_numbers"] %>">
+          <input type="submit" name="" value="buy">
+        </form>
+      </td>
+    </tr>
+    <% end %>
+</table>
+
+<br><a href="/home">homeに戻る</a>

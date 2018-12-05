@@ -1,0 +1,38 @@
+<br><a href="/home">homeに戻る</a>
+
+<h1>部材詳細ページ</h1>
+<%= @inform %>
+
+<table border="1">
+  　<tr>
+  　　<th>部材名前</th>
+  　　<th>部材価格[円]</th>
+      <th>手持ち部材[個]</th>
+    </tr>
+    <% @materials.each do |a| %>
+    <tr>
+      <td><%= a["name"] %></td>
+      <td><%= a["price"] %></td>
+      <td><%= a["stock_numbers"] %></td>
+    </tr>
+    <% end %>
+</table>
+
+<h1>製品詳細ページ</h1>
+
+<table border="1">
+  　<tr>
+  　　<th>製品名</th>
+  　　<th>製品価[円]</th>
+      <th>必要スキル</th>
+      <th>必要工程</th>
+    </tr>
+    <% @products.each do |a| %>
+    <tr>
+      <td><%= a["name"] %></td>
+      <td><%= a["price"] %></td>
+      <td><%= a["need_skill"] %></td>
+      <td><%= a["need_process"] %></td>
+    </tr>
+    <% end %>
+</table>

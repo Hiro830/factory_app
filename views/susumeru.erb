@@ -1,0 +1,46 @@
+<br><a href="/home">homeに戻る</a>
+
+<h1>誰が何を作ったかとか詳細を書く</h1>
+
+
+<table border="1">
+  　<tr>
+  　　<th>作業員名前</th>
+  　　<th>作成型式</th>
+      <th>作成台数</th>
+    </tr>
+    <% @arr_var.each do |a| %>
+    <tr>
+
+      <td><%= a[0] %></td>
+      <td><%= a[1] %></td>
+      <td><%= a[2] %></td>
+    </tr>
+    <% end %>
+</table>
+
+<br>
+<table border="1">
+  　<tr>
+  　　<th>売り上げ</th>
+  　　<th>人件費</th>
+      <th>基本金額</th>
+    </tr>
+    <tr>
+      <td><%= @month_money %>万円</td>
+      <td><%= @jinkenhi %>万円</td>
+      <td><%= @base_maney %>万円</td>
+    </tr>
+</table>
+
+<br>
+<table border="1">
+  　<tr>
+  　　<th>辞めた人</th>
+    </tr>
+    <% @yameta.each do |a| %>
+    <tr>
+      <td><%= a %></td>
+    </tr>
+    <% end %>
+</table>

@@ -1,0 +1,17 @@
+<!-- <!DOCTYPE html>
+<html lang="ja" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>login</title>
+  </head>
+  <body> -->
+    <h1>ログイン画面</h1>
+    <%= @page_info %>
+    <form action="/login" method="post">
+      ユーザー名: <input type="text" name="login_name" required>
+      パスワード: <input type="text" name="login_pass" required>
+      <input type="submit" value="ログイン">
+    </form>
+    <a href="/new_acount">新規登録</a>
+  <!-- </body>
+</html> -->
