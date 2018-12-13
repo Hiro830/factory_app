@@ -1,0 +1,35 @@
+<table border="1">
+  　<tr>
+  　　<th>商品番号</th>
+  　　<th>商品名</th>
+      <th>値段[円]</th>
+      <th>商品説明</th>
+      <th>影響範囲</th>
+      <th>使用回数</th>
+      <th>購入ラン</th>
+    </tr>
+    <% @shop_items.each do |item| %>
+    <tr>
+      <td><%= item["id"] %></td>
+      <td><%= item["name"] %></td>
+      <td><%= item["price"] %></td>
+      <td><%= item["description"] %></td>
+      <% if item["content3"] == 1 %>
+        <td>半永久的</td>
+      <% else %>
+        <td><%= item["content1"] %></td>
+      <% end %>
+      <td><%= item["content2"] %></td>
+
+      <td>
+        <form action="/shop" method="post">
+          個数: <input type="number" name="buy_numbers">
+          <input type="hidden" name="buy_price" value="<%= item["price"] %>">
+          <input type="hidden" name="buy_tipe" value="<%= item["id"] %>">
+
+          <input type="submit" name="" value="buy">
+        </form>
+      </td>
+    </tr>
+    <% end %>
+</table>

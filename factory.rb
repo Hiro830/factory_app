@@ -81,7 +81,7 @@ get '/stock' do
   is_login()
 
   # TODO ひっぱるための条件を記入する
-  @materials = client.xquery("select * from product_materials inner join user_stocks on product_materials.id = user_stocks.product_materials where user_stocks.user_id = ?;", session[:user_id])
+  @materials = client.xquery("select * from parts inner join user_parts on parts.id = user_parts.parts_id where user_parts.user_id = ?;", session[:user_id])
   @products = client.xquery("select * from products")
   erb :stock
 end
@@ -134,11 +134,11 @@ get '/susumeru' do
     #-------使用する部品と作成した台数を計算してupdateする
     midle = client.xquery("select * from middle_table where product_id = ?;",session[:product_id])
     midle.each do |search|
-      stocks = client.xquery("select * from user_stocks where user_id = ? and product_materials = ?;",session[:user_id],search["material_id"]).first
+      stocks = client.xquery("select * from user_parts where user_id = ? and parts_id = ?;",session[:user_id],search["material_id"]).first
       subtraction = stocks["stock_numbers"] - search["required_number"] * sum_make
       puts "計算結果を確認"
       puts subtraction
-      client.xquery("update user_stocks set stock_numbers = ? where user_id = ? and product_materials = ?;", subtraction, session[:user_id],search["material_id"])
+      client.xquery("update user_parts set stock_numbers = ? where user_id = ? and parts_id = ?;", subtraction, session[:user_id],search["material_id"])
     end
 
     #----------従業員の辞めるリスクの計算を　工場長リスクもあるよ
@@ -182,11 +182,33 @@ get '/customer' do
   erb :customer
 end
 
+# ======================
+get '/shop' do
+  is_login #ログイン確認
+  #最初でデータベースにデータ入れてないとデータの結合がうまくいかないかも
+  #shopにuser_itemをくっつけてnilなら0にするとかにすればいいかな
+  # TODO これもあとで
+  @shop_items = client.xquery("select * from shop;")
+
+  erb :shop
+end
+# =====
+
+post '/shop' do
+  item_numbers = params[:buy_numbers] #個数
+  item_price = params[:buy_price]    #price
+  item_id = params[:buy_tipe]        #id
+
+  redirect '/shop'
+#TODO userの過去の履歴を取得できるように
+#<input type="hidden" name="last_stock" value="<%= a["stock_numbers"] %>">
+end
 
 # ======================
 get '/buy' do
   is_login() #必要情報
-  @materials = client.xquery("select * from product_materials inner join user_stocks on product_materials.id = user_stocks.product_materials where user_stocks.user_id = ?;", session[:user_id])
+  @materials = client.xquery("select * from parts inner join user_parts on\
+     parts.id = user_parts.parts_id where user_parts.user_id = ?;", session[:user_id])
 
   @buy = session[:buy]
   session[:buy] = nil
@@ -205,8 +227,8 @@ post '/buy' do
 
   if money > sum_price
     session[:lastmoney] -= sum_price
-    puts session[:lastmoney]
-    client.xquery("update user_stocks set stock_numbers = ? where user_id = ? and product_materials = ?",sum_coutns, session[:user_id], type)
+
+    client.xquery("update user_parts set stock_numbers = ? where user_id = ? and parts_id = ?",sum_coutns, session[:user_id], type)
     client.xquery("update users_history set asset = ? where user_id = ? order by id desc limit 1;",session[:lastmoney], session[:user_id])
     session[:buy] = "購入しました"
   else
@@ -216,28 +238,35 @@ post '/buy' do
   redirect '/buy'
 end
 
+
 # ======================
 get '/yatou' do
   is_login #ログイン確認
   erb :yatou
 end
 # =====
-post '/yatou' do
+def yatouyo(user_id)
   name = ["饒波","知名","玉寄","下地","比嘉","宮城","座喜味","親里","屋我","玉城","前城","大城","鈴木","sabo","仲宗根","山内","高良","森","がけお"].sample(1)
   gender= ["man","woman"].sample
   skill = rand(3) #0~2でバラバラ
   ability = 2 + rand(3) #2~4の能力値になる
-  client.xquery("insert into employees values (null,?,?,?,?,?,default,default,?);", name, session[:user_id],gender,skill,ability,DateTime.now)
+  client.xquery("insert into employees values (null,?,?,?,?,?,default,default,?);", name, user_id,gender,skill,ability,DateTime.now)
   new_id =  client.last_id #最後のidを取得する!!
   #作業員の作った数を全部カウントする
-  material_numbers = client.xquery("SELECT COUNT(*) FROM products;")
-  material_numbers.each do |numbers|
-    numbers["COUNT(*)"].times do |number|
-      client.xquery("insert into e_make_product values(null,?,?,default);",new_id,number+1)
-    end
-  end
+  # material_numbers = client.xquery("SELECT COUNT(*) FROM products;")
+  # material_numbers.each do |numbers|
+  #   numbers["COUNT(*)"].times do |number|
+  #     client.xquery("insert into e_make_product values(null,?,?,default);",new_id,number+1)
+  #   end
+  # end
 
   session[:e_name] = name
+end
+# =====
+post '/yatou' do
+
+
+  yatouyo(session[:user_id])
   redirect '/home'
 end
 
@@ -294,17 +323,24 @@ post '/new_acount' do
     session[:page_info] = "ユーザー名がすでに使用されています。変更よろしくお願いします。"
   else
     #usersに追加
-    client.xquery("insert into users values (null,?,?,default,?,?);", params[:new_name], params[:new_pass],DateTime.now,DateTime.now)
+    client.xquery("insert into users values (null,?,?,default,default,?,?);", params[:new_name], params[:new_pass],DateTime.now,DateTime.now)
     new_id =  client.last_id #最後のidを取得する!!
     #historyに追加
     client.xquery("insert into users_history values(null,?,default,default,default,?);",new_id,DateTime.now)
+    #user_customerに追加
+    client.xquery("insert into customer values(null,?,?,default);","イルカ",new_id)
 
-    #user_stockも追加 materialの数値を確認して初期値を入力
-    material_numbers = client.xquery("SELECT COUNT(*) FROM product_materials;")
+    #user_partsに追加
+    material_numbers = client.xquery("SELECT COUNT(*) FROM parts;")
     material_numbers.each do |numbers|
       numbers["COUNT(*)"].times do |number|
-        client.xquery("insert into user_stocks values(null,?,?,default);",new_id,number+1)
+        client.xquery("insert into user_parts values(null,?,?,default);",new_id,number+1)
       end
+    end
+
+    #user_employeesを3人追加
+    3.times do
+      yatouyo(new_id)
     end
 
     session[:page_info] = "新規登録完了しました"

@@ -15,7 +15,7 @@
         <form action="/buy" method="post">
           個数: <input type="text" name="buy_count">
           <input type="hidden" name="m_price" value="<%= a["price"] %>">
-          <input type="hidden" name="m_type" value="<%= a["product_materials"] %>">
+          <input type="hidden" name="m_type" value="<%= a["parts_id"] %>">
           <input type="hidden" name="last_stock" value="<%= a["stock_numbers"] %>">
           <input type="submit" name="" value="buy">
         </form>
