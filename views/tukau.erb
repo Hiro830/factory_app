@@ -1,0 +1,19 @@
+<h1>アイテム詳細ベージ</h1>
+
+<table border="1">
+  　<tr>
+  　　<th>アイテム名</th>
+      <th>アイテム効果</th>
+  　　<th>手持ち個数</th>
+      <th>使いますか?</th>
+    </tr>
+    <% @items.each do |a| %>
+    <tr>
+      <td><%= a["nameitem"] %></td>
+      <td><%= a["description"] %></td>
+      <td><%= a["counts"] %></td>
+      <td><a href="/tukau/<%= a["id"]%>">つかう</a></td>
+
+    </tr>
+    <% end %>
+</table>

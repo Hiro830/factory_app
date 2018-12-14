@@ -110,11 +110,15 @@ get '/susumeru' do
   check_custmer #お客さん確認
   peple_count = 0
   @month_money = 0
-  product = client.xquery("SELECT * FROM products where id = ? ;", session[:product_id]).first
+  product = client.xquery("SELECT * FROM products \
+    where id = ? ;", session[:product_id]).first
   @arr_var = []
   @yameta = []
   #--------userの従業員を確認して売り上げの計算とどの従業員が何を何台作ったか計算する
-  employees = client.xquery("select * from employees where user_id = ? and retired_flag = ? and skill >= ?;",session[:user_id],0,product["need_skill"])
+  employees = client.xquery("select * from employees \
+    where user_id = ? and retired_flag = ? and skill >= ?;",\
+    session[:user_id],0,product["need_skill"])
+
   employees.each do | employee|
     peple_count += 1
     sum_make = 30 / product["need_process"] * employee["ability"]
@@ -123,22 +127,31 @@ get '/susumeru' do
     array1.push(employee["name"], product["name"], sum_make)
     @arr_var.push(array1)
 
-    x = client.xquery("select * from e_make_product where employee_id = ? and product_id = ?;",employee["id"],product["id"]).first
+    x = client.xquery("select * from e_make_product \
+      where employee_id = ? and product_id = ?;",\
+      employee["id"],product["id"]).first
+
     if x
-      client.xquery("update e_make_product set make_numbers = ? where employee_id = ? and product_id = ?;",sum_make + x["make_numbers"], employee["id"],product["id"])
+      client.xquery("update e_make_product set make_numbers = ? \
+        where employee_id = ? and product_id = ?;",\
+        sum_make + x["make_numbers"], employee["id"],product["id"])
     else
-      client.xquery("insert into e_make_product values(null,?,?,?);", employee["id"], product["id"], sum_make)
+      client.xquery("insert into e_make_product values(null,?,?,?);", \
+      employee["id"], product["id"], sum_make)
     end
 
 
     #-------使用する部品と作成した台数を計算してupdateする
-    midle = client.xquery("select * from middle_table where product_id = ?;",session[:product_id])
+    midle = client.xquery("select * from middle_table \
+      where product_id = ?;",session[:product_id])
     midle.each do |search|
-      stocks = client.xquery("select * from user_parts where user_id = ? and parts_id = ?;",session[:user_id],search["material_id"]).first
+      stocks = client.xquery("select * from user_parts \
+        where user_id = ? and parts_id = ?;",session[:user_id],search["material_id"]).first
+
       subtraction = stocks["stock_numbers"] - search["required_number"] * sum_make
-      puts "計算結果を確認"
-      puts subtraction
-      client.xquery("update user_parts set stock_numbers = ? where user_id = ? and parts_id = ?;", subtraction, session[:user_id],search["material_id"])
+
+      client.xquery("update user_parts set stock_numbers = ? \
+        where user_id = ? and parts_id = ?;", subtraction, session[:user_id],search["material_id"])
     end
 
     #----------従業員の辞めるリスクの計算を　工場長リスクもあるよ
@@ -166,23 +179,39 @@ get '/susumeru' do
   erb :susumeru
 end
 
+# ======================
 get '/customer' do
   is_login()
 
-  if session[:product_name] #"sessionに入ってる場合"
-    @res = session[:product_name]
-  else                     #"sessionに入ってない場合"
-    productNumber = [1,1,1,1,2,2,2,3,3,4].sample(1)
-    @res = client.xquery("SELECT * FROM products where id = ? ;", productNumber).first
-    session[:product_id] = @res["id"]
-    session[:product_name] = @res["name"]
-    @res = @res["name"]
+  # TODO お客さんが違う台数を要求するようにするには修正が必要だけど実行するだけならなんとかなる
+  # TODO sessionで判定するよりもデータベースから取ってきた方が確実
+  check_customer_order = client.xquery("SELECT * FROM customer_order \
+    where user_id = ? and checked = ?;", \
+    session[:user_id],0).first
+  if check_customer_order.nil?
+    customers = client.xquery("SELECT * FROM customer where user_id = ? ;", \
+      session[:user_id])
+    customers.each do |customer|
+      order_num = 100 # TODO ここもランダムにしたい
+      productNumber = [1,1,1,1,2,2,2,3,3,4].sample(1)
+      client.xquery("insert into customer_order values \
+        (null,?,?,?,?,default,default);",\
+         session[:user_id], customer["id"], productNumber, order_num)
+    end
   end
+  # TODO ひっぱるのもデータベース全部じゃなくて指定した方がいいけど長くなるから今はやらない
+  @customers = client.xquery("select * from customer_order \
+    left join customer on customer_order.customer_id = customer.id\
+    left join products on customer_order.products_id = products.id\
+    where customer_order.user_id = ?\
+    and customer_order.checked = ?;",session[:user_id],0)
 
   erb :customer
 end
 
+
 # ======================
+
 get '/shop' do
   is_login #ログイン確認
   #最初でデータベースにデータ入れてないとデータの結合がうまくいかないかも
@@ -195,16 +224,78 @@ end
 # =====
 
 post '/shop' do
-  item_numbers = params[:buy_numbers] #個数
-  item_price = params[:buy_price]    #price
-  item_id = params[:buy_tipe]        #id
+  item_numbers = params[:buy_numbers].to_i #個数
+  item_price = params[:buy_price].to_i    #price
+  item_id = params[:buy_tipe].to_i        #id
+  user_item = client.xquery("SELECT counts FROM user_items \
+    where user_id = ? and shop_id = ? ;", \
+    session[:user_id], item_id).first
+  # TODO userが持ってる場合と持ってない場合の洗濯!
+
+  if user_item #持ってるupdate
+    sum_numbers = user_item['counts'].to_i + item_numbers
+    client.xquery("update user_items set counts = ? \
+      where shop_id = ? and user_id = ?;",sum_numbers, \
+      item_id, session[:user_id])
+
+    puts user_item['counts'].to_i + item_numbers
+  else #持ってない　insert
+      client.xquery("insert into user_items values \
+        (null,?,?,?);", \
+        item_id, session[:user_id], item_numbers)
+  end
+
+  # TODO 資産から計算してマイナスなら戻る　関数でチェックする機能作る 足りなければセッションに情報載せてhomeに返す
+  session[:lastmoney] -= item_price * item_numbers
+  client.xquery("update users_history set asset = ? \
+    where user_id = ? order by id desc limit 1;",\
+    session[:lastmoney], session[:user_id])
 
   redirect '/shop'
-#TODO userの過去の履歴を取得できるように
-#<input type="hidden" name="last_stock" value="<%= a["stock_numbers"] %>">
 end
 
 # ======================
+get '/tukau' do
+  is_login()
+
+   @items = client.xquery("select * from user_items left join shop \
+     on user_items.shop_id = shop.id where user_items.user_id = ?;", \
+      session[:user_id])
+  erb :tukau
+end
+
+get '/tukau/:item_id' do
+  # TODO テーブルくっつけるときに名前が被ってると上書きされる。
+  # TODO 今回はshop_idが入っているのでそれとuser_idをつかって再度使うものを検索する（手間だな）
+  item_id = params[:item_id]
+  use_item = client.xquery("SELECT * FROM user_items \
+    where shop_id = ? and user_id = ? ;", \
+    item_id, session[:user_id]).first
+
+    #TODO ここにアイテムの処理を追加する
+    #TODO １だけ実装するかな
+  if item_id == "1" #呼び戻すコマンド
+    puts "１にきた"
+    puts "ここだけ頑張ろう！"
+  elsif item_id == "3" #まかない
+    puts "3にきた"
+  elsif item_id == "4" #スキルアップ
+    puts "4にきた"
+  elsif item_id == "5" #スピードアップ
+    puts "5にきた"
+  else
+    puts "反応してない"
+  end
+
+  redirect '/tukau'
+end
+
+# =====
+
+
+
+# ======================
+
 get '/buy' do
   is_login() #必要情報
   @materials = client.xquery("select * from parts inner join user_parts on\
@@ -228,7 +319,7 @@ post '/buy' do
   if money > sum_price
     session[:lastmoney] -= sum_price
 
-    client.xquery("update user_parts set stock_numbers = ? where user_id = ? and parts_id = ?",sum_coutns, session[:user_id], type)
+    client.xquery("update user_parts set stock_numbers = ? where user_id = ? and parts_id = ?;",sum_coutns, session[:user_id], type)
     client.xquery("update users_history set asset = ? where user_id = ? order by id desc limit 1;",session[:lastmoney], session[:user_id])
     session[:buy] = "購入しました"
   else
@@ -267,6 +358,13 @@ post '/yatou' do
 
 
   yatouyo(session[:user_id])
+  #TODO お金チェックを作りたい
+
+  #TODO -10蔓延
+  session[:lastmoney] -= 100000
+  client.xquery("update users_history set asset = ? \
+    where user_id = ? order by id desc limit 1;",\
+    session[:lastmoney], session[:user_id])
   redirect '/home'
 end
 

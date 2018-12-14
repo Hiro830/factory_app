@@ -4,14 +4,13 @@
   　　<th>商品名</th>
       <th>値段[円]</th>
       <th>商品説明</th>
-      <th>影響範囲</th>
       <th>使用回数</th>
       <th>購入ラン</th>
     </tr>
     <% @shop_items.each do |item| %>
     <tr>
       <td><%= item["id"] %></td>
-      <td><%= item["name"] %></td>
+      <td><%= item["nameitem"] %></td>
       <td><%= item["price"] %></td>
       <td><%= item["description"] %></td>
       <% if item["content3"] == 1 %>
@@ -19,7 +18,6 @@
       <% else %>
         <td><%= item["content1"] %></td>
       <% end %>
-      <td><%= item["content2"] %></td>
 
       <td>
         <form action="/shop" method="post">

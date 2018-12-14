@@ -1,2 +1,6 @@
 <h1>customer service</h1>
-<h2>今月は<%= @res%>をください</h2>
+
+<% @customers.each do |customer| %>
+  <h1><%= customer["namecust"] %>様は今月<%= customer["name"] %>が<%= customer["order_numbers"] %>欲しいらしいです.</h1>
+  <br>
+<% end %>
